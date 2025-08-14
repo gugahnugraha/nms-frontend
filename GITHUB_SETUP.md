@@ -1,43 +1,43 @@
-# Langkah-langkah Membuat Repository GitHub dan Push Kode
+# Steps to Create a GitHub Repository and Push Code
 
-Berikut adalah langkah-langkah untuk membuat repository baru di GitHub dan mengunggah kode NMS Frontend yang sudah kita persiapkan:
+Here are the steps to create a new GitHub repository and upload the NMS Frontend code that we have prepared:
 
-## 1. Membuat Repository Baru di GitHub
+## 1. Creating a New GitHub Repository
 
-1. Buka [GitHub](https://github.com/) dan login ke akun Anda
-2. Klik tombol "+" di kanan atas, lalu pilih "New repository"
-3. Isi informasi repository:
-   - Repository name: `nms-frontend` (atau nama lain yang Anda inginkan)
+1. Open [GitHub](https://github.com/) and log in to your account
+2. Click the "+" button in the top right, then select "New repository"
+3. Fill in the repository information:
+   - Repository name: `nms-frontend` (or another name of your choice)
    - Description: Network Monitoring System Frontend Application
-   - Visibility: Public (atau Private jika Anda ingin menjaga privasi)
-   - Pilih "Initialize this repository with a README" jika Anda ingin GitHub membuat README dasar
-   - Klik "Create repository"
+   - Visibility: Public (or Private if you want to maintain privacy)
+   - Select "Initialize this repository with a README" if you want GitHub to create a basic README
+   - Click "Create repository"
 
-## 2. Menghubungkan Repository Lokal dengan GitHub
+## 2. Connecting the Local Repository with GitHub
 
-Setelah repository GitHub dibuat, Anda akan melihat halaman dengan instruksi. Gunakan perintah berikut di terminal untuk menghubungkan repository lokal dengan GitHub:
+After the GitHub repository is created, you will see a page with instructions. Use the following commands in your terminal to connect the local repository with GitHub:
 
 ```bash
-# Menambahkan remote repository
+# Adding the remote repository
 git remote add origin https://github.com/gugahnugraha/nms-frontend.git
 
-# Push kode ke repository GitHub
+# Pushing code to the GitHub repository
 git push -u origin main
 ```
 
-Pastikan untuk mengganti `gugahnugraha/nms-frontend.git` dengan nama pengguna GitHub dan nama repository Anda.
+Be sure to replace `gugahnugraha/nms-frontend.git` with your GitHub username and repository name.
 
-## 3. Verifikasi
+## 3. Verification
 
-1. Setelah proses push selesai, refresh halaman GitHub repository Anda
-2. Anda akan melihat semua file proyek sudah tersedia di GitHub
-3. README.md dan INTEGRATION.md akan ditampilkan di halaman utama repository
+1. After the push process is complete, refresh your GitHub repository page
+2. You will see all project files are now available on GitHub
+3. README.md and INTEGRATION.md will be displayed on the repository's main page
 
-## 4. Langkah Selanjutnya
+## 4. Next Steps
 
-- Aktifkan GitHub Pages jika Anda ingin membuat demo online (Settings > Pages)
-- Tambahkan kolaborator jika Anda bekerja dalam tim
-- Buat issues untuk melacak fitur yang perlu dikembangkan
-- Buat branch development terpisah untuk pengembangan berkelanjutan
+- Activate GitHub Pages if you want to create an online demo (Settings > Pages)
+- Add collaborators if you are working in a team
+- Create issues to track features that need to be developed
+- Create a separate development branch for continuous development
 
-Selamat! Repository NMS Frontend Anda sudah tersedia di GitHub dan siap untuk digunakan atau dikembangkan lebih lanjut.
+Congratulations! Your NMS Frontend repository is now available on GitHub and ready to be used or further developed.

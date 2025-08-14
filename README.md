@@ -357,7 +357,7 @@ server {
 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
-## Build untuk Produksi
+## Build for Production
 
 ```
 npm run build
