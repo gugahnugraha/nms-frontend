@@ -40,8 +40,8 @@ A comprehensive network monitoring solution with real-time monitoring, device ma
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/gugahnugraha/nms6.git
-   cd nms6/frontend
+   git clone https://github.com/gugahnugraha/nms-frontend.git
+   cd nms-frontend
    ```
 
 2. Install dependencies:
