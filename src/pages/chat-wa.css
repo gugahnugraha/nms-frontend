@@ -1,0 +1,131 @@
+/* Chat WhatsApp-like overrides extracted from Chat.jsx */
+
+/* Add a breakpoint for extra small devices */
+@media (min-width: 480px) {
+  .xs\:inline {
+    display: inline;
+  }
+  .xs\:flex-row {
+    flex-direction: row;
+  }
+  .xs\:w-2\/3 {
+    width: 66.666667%;
+  }
+  .xs\:hidden {
+    display: none;
+  }
+}
+
+/* Container backgrounds */
+.chat-wa {
+  background: #efeae2 !important;
+  position: relative;
+}
+.dark .chat-wa {
+  background: linear-gradient(135deg, #0c1317 0%, #202c33 100%) !important;
+}
+.chat-wa::before {
+  content: '';
+  position: absolute; inset: 0;
+  background-image:
+    radial-gradient(circle at 20% 80%, rgba(0,0,0,.03) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(0,0,0,.02) 0%, transparent 50%),
+    radial-gradient(circle at 40% 40%, rgba(0,0,0,.02) 0%, transparent 50%);
+  pointer-events: none;
+}
+.dark .chat-wa::before {
+  background-image:
+    radial-gradient(circle at 20% 80%, rgba(120,119,198,.03) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(255,255,255,.03) 0%, transparent 50%),
+    radial-gradient(circle at 40% 40%, rgba(120,119,198,.02) 0%, transparent 50%);
+}
+
+/* Bubble base styles */
+.rce-message .rce-mbox,
+.rce-message .rce-mbox > .rce-mbox-body { border-radius: 18px !important; box-shadow: 0 1px 2px rgba(0,0,0,.1) !important; border: none !important; }
+.rce-mbox .rce-mbox-title { font-weight: 600; margin-bottom: 2px; font-size: 12px; }
+@media (min-width: 640px) {
+  .rce-mbox .rce-mbox-title { font-size: 14px; }
+}
+.rce-mbox-text { line-height: 1.4; font-size: 12px; }
+@media (min-width: 640px) {
+  .rce-mbox-text { font-size: 14px; }
+}
+.rce-mbox-time { opacity: .7; font-size: 9px; margin-top: 2px; }
+@media (min-width: 640px) {
+  .rce-mbox-time { font-size: 11px; }
+}
+
+/* Light: left/right */
+.chat-wa .rce-message.rce-message--left .rce-mbox,
+.chat-wa .rce-message.rce-message--left .rce-mbox > .rce-mbox-body,
+.chat-wa .rce-mbox.rce-mbox-left,
+.chat-wa .rce-mbox.rce-mbox-left > .rce-mbox-body,
+.rce-message.rce-message--left .rce-mbox,
+.rce-message.rce-message--left .rce-mbox > .rce-mbox-body { background:#f3f4f6 !important; background-color:#f3f4f6 !important; color:#111b21 !important; }
+
+.chat-wa .rce-message.rce-message--right .rce-mbox,
+.chat-wa .rce-message.rce-message--right .rce-mbox > .rce-mbox-body,
+.chat-wa .rce-mbox.rce-mbox-right,
+.chat-wa .rce-mbox.rce-mbox-right > .rce-mbox-body,
+.rce-message.rce-message--right .rce-mbox,
+.rce-message.rce-message--right .rce-mbox > .rce-mbox-body { background:#d9fdd3 !important; background-color:#d9fdd3 !important; color:#111b21 !important; }
+
+/* Dark: left/right */
+.dark .chat-wa .rce-message.rce-message--left .rce-mbox,
+.dark .chat-wa .rce-message.rce-message--left .rce-mbox > .rce-mbox-body,
+.dark .chat-wa .rce-mbox.rce-mbox-left,
+.dark .chat-wa .rce-mbox.rce-mbox-left > .rce-mbox-body,
+.dark .rce-message.rce-message--left .rce-mbox,
+.dark .rce-message.rce-message--left .rce-mbox > .rce-mbox-body { background:#ffffff !important; color:#111827 !important; }
+
+.dark .chat-wa .rce-message.rce-message--right .rce-mbox,
+.dark .chat-wa .rce-message.rce-message--right .rce-mbox > .rce-mbox-body,
+.dark .chat-wa .rce-mbox.rce-mbox-right,
+.dark .chat-wa .rce-mbox.rce-mbox-right > .rce-mbox-body,
+.dark .rce-message.rce-message--right .rce-mbox,
+.dark .rce-message.rce-message--right .rce-mbox > .rce-mbox-body { background:#c1f7d0 !important; color:#111827 !important; }
+
+/* Remove bubble tails */
+.chat-wa .rce-mbox:before,
+.chat-wa .rce-mbox:after,
+.chat-wa .rce-mbox-body:before,
+.chat-wa .rce-mbox-body:after,
+.chat-wa .rce-message .rce-mbox:before,
+.chat-wa .rce-message .rce-mbox:after,
+.chat-wa .rce-message .rce-mbox-body:before,
+.chat-wa .rce-message .rce-mbox-body:after { display:block !important; border:0 !important; }
+
+/* Avatar outline */
+.rce-avatar, .dark .rce-avatar { border:1px solid #00a884 !important; }
+
+/* Responsive Avatar size */
+@media (max-width: 640px) {
+  .rce-avatar-container {
+    width: 30px !important;
+    height: 30px !important;
+  }
+  .rce-avatar {
+    width: 30px !important;
+    height: 30px !important;
+  }
+}
+
+/* Scrollbar */
+.chat-wa::-webkit-scrollbar{ width:4px; }
+.chat-wa::-webkit-scrollbar-thumb{ background:#8696a0; border-radius:3px; }
+.chat-wa::-webkit-scrollbar-thumb:hover{ background:#667781; }
+
+/* Responsive padding for message containers */
+@media (max-width: 640px) {
+  .message-list {
+    padding: 8px !important;
+  }
+  .rce-container-mbox {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  .rce-mbox {
+    max-width: 85% !important;
+  }
+}

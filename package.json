@@ -1,0 +1,85 @@
+{
+  "name": "frontend",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@headlessui/react": "^2.2.4",
+    "@heroicons/react": "^2.2.0",
+    "@mui/icons-material": "^7.2.0",
+    "@mui/material": "^7.2.0",
+    "@reactflow/background": "^11.3.14",
+    "@reactflow/controls": "^11.2.14",
+    "@reactflow/minimap": "^11.7.14",
+    "@reactflow/node-resizer": "^2.2.14",
+    "@reduxjs/toolkit": "^2.8.2",
+    "@tailwindcss/postcss": "^4.1.11",
+    "@testing-library/dom": "^10.4.0",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^13.5.0",
+    "apexcharts": "^5.3.1",
+    "axios": "^1.10.0",
+    "chart.js": "^4.5.0",
+    "d3-geo": "^3.1.1",
+    "d3-scale": "^4.0.2",
+    "dayjs": "^1.11.13",
+    "exceljs": "^4.4.0",
+    "file-saver": "^2.0.5",
+    "framer-motion": "^12.23.12",
+    "i18next": "^25.3.2",
+    "jspdf": "^3.0.1",
+    "jspdf-autotable": "^5.0.2",
+    "lucide-react": "^0.539.0",
+    "react": "^19.1.0",
+    "react-apexcharts": "^1.7.0",
+    "react-chartjs-2": "^5.3.0",
+    "react-chat-elements": "^12.0.18",
+    "react-dom": "^19.1.0",
+    "react-i18next": "^15.6.1",
+    "react-redux": "^9.2.0",
+    "react-router-dom": "^6.30.1",
+    "react-scripts": "5.0.1",
+    "react-toastify": "^11.0.5",
+    "reactflow": "^11.11.4",
+    "recharts": "^3.1.2",
+    "redux": "^5.0.1",
+    "socket.io-client": "^4.8.1",
+    "styled-components": "^6.1.19",
+    "topojson-client": "^3.1.0",
+    "web-vitals": "^2.1.4",
+    "xlsx-js-style": "^1.2.0"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.16",
+    "postcss": "^8.4.31",
+    "tailwindcss": "^3.3.5",
+    "typescript": "4.9.5"
+  },
+  "proxy": "http://localhost:5000"
+}

@@ -1,0 +1,1213 @@
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
+import { useTranslation } from 'react-i18next';
+import { motion, AnimatePresence } from 'framer-motion';
+import { jsPDF } from 'jspdf';
+import 'jspdf-autotable';
+import { saveAs } from 'file-saver';
+import { 
+  BarChart, Bar, PieChart, Pie, Cell,
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
+} from 'recharts';
+import { getDevices } from '../redux/slices/deviceSlice';
+import Button from '../components/ui/Button';
+import {
+  ChartBarIcon,
+  PrinterIcon,
+  TableCellsIcon,
+  ClockIcon,
+  ServerIcon,
+  ExclamationTriangleIcon,
+  DocumentArrowDownIcon,
+  CalendarIcon,
+  ArrowPathIcon,
+  EyeIcon,
+  DocumentChartBarIcon,
+  ShareIcon,
+  BookmarkIcon,
+  EnvelopeIcon
+} from '@heroicons/react/24/outline';
+
+const Reports = () => {
+  const { t } = useTranslation();
+  const dispatch = useDispatch();
+  const { devices, loading: devicesLoading } = useSelector((state) => state.devices);
+  const { user } = useSelector((state) => state.auth);
+  
+  const [reportType, setReportType] = useState('deviceStatus');
+  const [dateRange, setDateRange] = useState({
+    start: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    end: new Date().toISOString().split('T')[0]
+  });
+
+  const [reportData, setReportData] = useState(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [savedReports, setSavedReports] = useState([]);
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [reportName, setReportName] = useState('');
+  const [showShareDialog, setShowShareDialog] = useState(false);
+  const [shareEmail, setShareEmail] = useState('');
+  const [showSavedReportsDialog, setShowSavedReportsDialog] = useState(false);
+  
+  // Chart theming for light/dark
+  const isDark = typeof document !== 'undefined' && document.documentElement.classList.contains('dark');
+  const chartTextColor = isDark ? '#FFFFFF' : '#374151';
+  const chartGridColor = isDark ? '#374151' : '#e5e7eb';
+  
+  // Report types
+  const reportTypes = useMemo(() => [
+    { id: 'deviceStatus', icon: ServerIcon },
+    { id: 'performance', icon: ChartBarIcon },
+    { id: 'availability', icon: ClockIcon },
+    { id: 'incidents', icon: ExclamationTriangleIcon },
+    { id: 'inventory', icon: TableCellsIcon }
+  ], []);
+  
+  useEffect(() => {
+    if (!devices.length) {
+      dispatch(getDevices());
+    }
+  }, [dispatch, devices.length]);
+  
+  // Generate report based on type
+  const generateReport = useCallback(async () => {
+    if (devicesLoading || isGenerating) return;
+    
+    setIsGenerating(true);
+    try {
+      let data = {};
+      switch (reportType) {
+        case 'deviceStatus':
+          data = generateDeviceStatusReport();
+          break;
+        case 'performance':
+          data = await generatePerformanceReport();
+          break;
+        case 'availability':
+          data = generateAvailabilityReport();
+          break;
+        case 'incidents':
+          data = generateIncidentsReport();
+          break;
+        case 'inventory':
+          data = generateInventoryReport();
+          break;
+        default:
+          data = generateDeviceStatusReport();
+      }
+      setReportData(data);
+    } catch (error) {
+      console.error("Error generating report:", error);
+    } finally {
+      setIsGenerating(false);
+    }
+  }, [reportType, devices, devicesLoading, isGenerating]);
+  
+  // Helpers
+  const normalizeStatusUp = useCallback((status) => {
+    if (!status) return false;
+    const upperStatus = String(status).toUpperCase();
+    return upperStatus === 'UP' || upperStatus === 'ACTIVE' || upperStatus === 'ONLINE';
+  }, []);
+  
+  const statusLabel = useCallback((status) => {
+    return normalizeStatusUp(status) ? t('common.up') : t('common.down');
+  }, [t, normalizeStatusUp]);
+  
+  // Generate Device Status Report
+  const generateDeviceStatusReport = () => {
+    const upDevices = devices.filter(d => normalizeStatusUp(d.status)).length;
+    const downDevices = devices.filter(d => String(d.status || '').toUpperCase() === 'DOWN').length;
+    const totalDevices = devices.length;
+    
+    const devicesByType = {};
+    devices.forEach(device => {
+      const typeKey = device.type || 'other';
+      if (!devicesByType[typeKey]) {
+        devicesByType[typeKey] = { up: 0, down: 0 };
+      }
+      if (normalizeStatusUp(device.status)) {
+        devicesByType[typeKey].up += 1;
+      } else {
+        devicesByType[typeKey].down += 1;
+      }
+    });
+    
+    return {
+      summary: {
+        total: totalDevices,
+        up: upDevices,
+        down: downDevices,
+        upPercentage: totalDevices > 0 ? ((upDevices / totalDevices) * 100).toFixed(2) : 0
+      },
+      byType: Object.entries(devicesByType).map(([type, stats]) => ({
+        type,
+        ...stats,
+        total: stats.up + stats.down
+      })),
+      details: devices.map(device => ({
+        name: device.name,
+        ip: device.ip,
+        type: device.type,
+        location: device.location || '-',
+        status: device.status,
+        lastUpdate: device.updatedAt ? new Date(device.updatedAt).toLocaleString() : '-'
+      })),
+      charts: {
+        statusDistribution: [
+          { name: t('common.up'), value: upDevices, color: '#10b981' },
+          { name: t('common.down'), value: downDevices, color: '#ef4444' }
+        ],
+        typeDistribution: Object.entries(devicesByType).map(([type, stats]) => ({
+          type: t(`devices.${type}`),
+          up: stats.up,
+          down: stats.down
+        }))
+      }
+    };
+  };
+  
+  // Generate Performance Report (mock data for demo)
+  const generatePerformanceReport = async () => {
+    const performanceData = devices.map(device => ({
+      device: device.name,
+      avgCpu: Math.floor(Math.random() * 60) + 20,
+      avgMemory: Math.floor(Math.random() * 70) + 15,
+      avgBandwidth: Math.floor(Math.random() * 1000) + 100,
+      peakCpu: Math.floor(Math.random() * 30) + 70,
+      peakMemory: Math.floor(Math.random() * 20) + 80
+    }));
+    
+    return {
+      summary: {
+        avgCpu: (performanceData.reduce((acc, d) => acc + d.avgCpu, 0) / Math.max(performanceData.length, 1)).toFixed(2),
+        avgMemory: (performanceData.reduce((acc, d) => acc + d.avgMemory, 0) / Math.max(performanceData.length, 1)).toFixed(2),
+        highCpuDevices: performanceData.filter(d => d.avgCpu > 70).length,
+        highMemoryDevices: performanceData.filter(d => d.avgMemory > 80).length
+      },
+      details: performanceData,
+      charts: {
+        cpuUsage: performanceData.map(d => ({ device: d.device, cpu: d.avgCpu })),
+        memoryUsage: performanceData.map(d => ({ device: d.device, memory: d.avgMemory }))
+      }
+    };
+  };
+  
+  // Generate Availability Report
+  const generateAvailabilityReport = () => {
+    const availabilityData = devices.map(device => {
+      const uptime = normalizeStatusUp(device.status) ? Math.floor(Math.random() * 20) + 80 : Math.floor(Math.random() * 30) + 40;
+      return {
+        device: device.name,
+        ip: device.ip,
+        uptime: uptime,
+        downtime: 100 - uptime,
+        incidents: Math.floor(Math.random() * 5)
+      };
+    });
+    
+    return {
+      summary: {
+        avgUptime: (availabilityData.reduce((acc, d) => acc + d.uptime, 0) / Math.max(availabilityData.length, 1)).toFixed(2),
+        totalIncidents: availabilityData.reduce((acc, d) => acc + d.incidents, 0),
+        criticalDevices: availabilityData.filter(d => d.uptime < 90).length
+      },
+      details: availabilityData,
+      charts: {
+        uptimeDistribution: availabilityData.map(d => ({
+          device: d.device,
+          uptime: d.uptime,
+          downtime: d.downtime
+        }))
+      }
+    };
+  };
+  
+  // Generate Incidents Report
+  const generateIncidentsReport = () => {
+    const incidents = [];
+    const severities = ['critical', 'warning', 'info'];
+    const types = [t('reports.incidentTypes.deviceDown'), t('reports.incidentTypes.highCpu'), t('reports.incidentTypes.highMemory'), t('reports.incidentTypes.networkIssue')];
+    
+    for (let i = 0; i < 20; i++) {
+      const device = devices[Math.floor(Math.random() * Math.max(devices.length, 1))];
+      if (device) {
+        incidents.push({
+          id: i + 1,
+          device: device.name,
+          type: types[Math.floor(Math.random() * types.length)],
+          severity: severities[Math.floor(Math.random() * severities.length)],
+          timestamp: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toLocaleString(),
+          resolved: Math.random() > 0.3
+        });
+      }
+    }
+    
+    const severityCount = { critical: 0, warning: 0, info: 0 };
+    const typeCount = {};
+    
+    incidents.forEach(incident => {
+      severityCount[incident.severity]++;
+      typeCount[incident.type] = (typeCount[incident.type] || 0) + 1;
+    });
+    
+    return {
+      summary: {
+        total: incidents.length,
+        resolved: incidents.filter(i => i.resolved).length,
+        unresolved: incidents.filter(i => !i.resolved).length,
+        critical: severityCount.critical
+      },
+      details: incidents,
+      charts: {
+        bySeverity: Object.entries(severityCount).map(([severity, count]) => ({
+          severity,
+          count,
+          color: severity === 'critical' ? '#ef4444' : severity === 'warning' ? '#f59e0b' : '#3b82f6'
+        })),
+        byType: Object.entries(typeCount).map(([type, count]) => ({ type, count }))
+      }
+    };
+  };
+  
+  // Generate Inventory Report
+  const generateInventoryReport = () => {
+    const typeCount = {};
+    const locationCount = {};
+    
+    devices.forEach(device => {
+      const typeKey = device.type || 'other';
+      typeCount[typeKey] = (typeCount[typeKey] || 0) + 1;
+      const location = device.location || t('common.na');
+      locationCount[location] = (locationCount[location] || 0) + 1;
+    });
+    
+    return {
+      summary: {
+        total: devices.length,
+        types: Object.keys(typeCount).length,
+        locations: Object.keys(locationCount).length
+      },
+      details: devices.map(device => ({
+        id: device.deviceId,
+        name: device.name,
+        ip: device.ip,
+        type: device.type,
+        location: device.location || '-',
+        community: device.community,
+        created: device.createdAt ? new Date(device.createdAt).toLocaleDateString() : '-'
+      })),
+      charts: {
+        byType: Object.entries(typeCount).map(([type, count]) => ({
+          type: t(`devices.${type}`),
+          count
+        })),
+        byLocation: Object.entries(locationCount).map(([location, count]) => ({
+          location,
+          count
+        }))
+      }
+    };
+  };
+  
+  // Export to PDF
+  const exportToPDF = useCallback(() => {
+    if (!reportData || isExporting) return;
+    
+    setIsExporting(true);
+    try {
+      const doc = new jsPDF();
+      const reportTitle = t(`reports.types.${reportType}.name`);
+      
+      // Add report header
+      doc.setFontSize(20);
+      doc.text(reportTitle, 20, 20);
+      doc.setFontSize(12);
+      doc.text(`${t('reports.generatedAt')}: ${new Date().toLocaleString()}`, 20, 30);
+      if (user?.name) doc.text(`${t('reports.generatedBy')}: ${user.name}`, 20, 38);
+      doc.text(`${t('reports.dateRange')}: ${dateRange.start} ${t('reports.to')} ${dateRange.end}`, 20, 46);
+      
+      // Add summary
+      if (reportData?.summary) {
+        doc.setFontSize(16);
+        doc.text(t('reports.summary'), 20, 60);
+        doc.setFontSize(12);
+        let y = 70;
+        Object.entries(reportData.summary).forEach(([key, value]) => {
+          const label = t(`reports.summaryLabels.${key}`, key.replace(/([A-Z])/g, ' $1').trim());
+          doc.text(`${label}: ${value}`, 20, y);
+          y += 8;
+        });
+      }
+      
+      // Add details table
+      if (reportData?.details && reportData.details.length > 0) {
+        const headers = Object.keys(reportData.details[0]);
+        const data = reportData.details.map(item => Object.values(item));
+        doc.autoTable({
+          head: [headers.map(h => t(`reports.table.${h}`, h.charAt(0).toUpperCase() + h.slice(1)))],
+          body: data,
+          startY: 100,
+          styles: { fontSize: 10 },
+          headStyles: { fillColor: [59, 130, 246] }
+        });
+      }
+      
+      doc.save(`${reportTitle}-${new Date().toISOString().split('T')[0]}.pdf`);
+    } catch (error) {
+      console.error("Error exporting to PDF:", error);
+    } finally {
+      setIsExporting(false);
+    }
+  }, [reportData, reportType, t, user, dateRange, isExporting]);
+
+  // Export to Excel (CSV)
+  const exportToExcel = useCallback(() => {
+    if (!reportData || isExporting) return;
+    
+    setIsExporting(true);
+    try {
+      const csvData = [];
+      if (reportData?.details && reportData.details.length > 0) {
+        const headers = Object.keys(reportData.details[0]);
+        csvData.push(headers.map(h => t(`reports.table.${h}`, h)).join(','));
+        
+        reportData.details.forEach(item => { 
+          csvData.push(Object.values(item).join(',')); 
+        });
+      }
+      
+      const blob = new Blob([csvData.join('\n')], { type: 'text/csv;charset=utf-8' });
+      saveAs(blob, `${reportType}-report-${new Date().toISOString().split('T')[0]}.csv`);
+    } catch (error) {
+      console.error("Error exporting to Excel:", error);
+    } finally {
+      setIsExporting(false);
+    }
+  }, [reportData, reportType, t, isExporting]);
+  
+  // Load saved reports from localStorage
+  useEffect(() => {
+    const loadSavedReports = () => {
+      try {
+        const saved = localStorage.getItem('savedReports');
+        if (saved) {
+          setSavedReports(JSON.parse(saved));
+        }
+      } catch (error) {
+        console.error('Error loading saved reports:', error);
+      }
+    };
+    
+    loadSavedReports();
+  }, []);
+  
+  // Save current report
+  const saveReport = useCallback(() => {
+    if (!reportData) return;
+    
+    const newReport = {
+      id: Date.now(),
+      name: reportName || `${t(`reports.types.${reportType}.name`)} - ${new Date().toLocaleDateString()}`,
+      type: reportType,
+      dateRange,
+      data: reportData,
+      createdAt: new Date().toISOString()
+    };
+    
+    const updatedReports = [...savedReports, newReport];
+    setSavedReports(updatedReports);
+    
+    try {
+      localStorage.setItem('savedReports', JSON.stringify(updatedReports));
+      setShowSaveDialog(false);
+      setReportName('');
+    } catch (error) {
+      console.error('Error saving report:', error);
+    }
+  }, [reportData, reportName, reportType, savedReports, dateRange, t]);
+  
+  // Load a saved report
+  const loadSavedReport = useCallback((report) => {
+    setReportType(report.type);
+    setDateRange(report.dateRange);
+    setReportData(report.data);
+    setShowSavedReportsDialog(false);
+  }, []);
+  
+  // Delete a saved report
+  const deleteSavedReport = useCallback((id) => {
+    const updatedReports = savedReports.filter(report => report.id !== id);
+    setSavedReports(updatedReports);
+    
+    try {
+      localStorage.setItem('savedReports', JSON.stringify(updatedReports));
+    } catch (error) {
+      console.error('Error deleting report:', error);
+    }
+  }, [savedReports]);
+  
+  // Share report via email (mock functionality)
+  const shareReportViaEmail = useCallback(() => {
+    // In a real application, this would call an API to send the email
+    console.log(`Sharing report with ${shareEmail}`);
+    setShowShareDialog(false);
+    setShareEmail('');
+    
+    // Show success notification (mock)
+    alert(t('reports.shareSuccess', 'Report shared successfully!'));
+  }, [shareEmail, t]);
+  
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 sm:p-6">
+      {/* Header */}
+      <div className="mb-6 sm:mb-8">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-primary-400 to-primary-600 bg-clip-text text-transparent">
+              {t('reports.title')}
+            </h1>
+            <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 mt-2">
+              {t('reports.description')}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Report Type Selection */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 border border-gray-200 dark:border-gray-700 shadow-sm mb-6 sm:mb-8">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">{t('reports.reportTypes')}</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+          {reportTypes.map((type) => (
+            <motion.button
+              key={type.id}
+              onClick={() => setReportType(type.id)}
+              className={`p-3 sm:p-4 rounded-lg border-2 transition-all duration-200 ${
+                reportType === type.id
+                  ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
+                  : 'border-gray-200 dark:border-gray-700 hover:border-primary-300 dark:hover:border-primary-700'
+              }`}
+              whileHover={{ y: -2 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <div className="text-center">
+                <div className={`w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-2 sm:mb-3 rounded-lg flex items-center justify-center ${
+                  reportType === type.id
+                    ? 'bg-primary-100 dark:bg-primary-900/30'
+                    : 'bg-gray-100 dark:bg-gray-700'
+                }`}>
+                  <type.icon className={`w-5 h-5 sm:w-6 sm:h-6 ${
+                    reportType === type.id
+                      ? 'text-primary-600 dark:text-primary-400'
+                      : 'text-gray-600 dark:text-gray-400'
+                  }`} />
+                </div>
+                <h4 className={`text-sm sm:text-base font-medium ${
+                  reportType === type.id
+                    ? 'text-primary-900 dark:text-primary-100'
+                    : 'text-gray-900 dark:text-white'
+                }`}>
+                  {t(`reports.types.${type.id}.name`)}
+                </h4>
+                <p className={`text-xs sm:text-sm mt-1 ${
+                  reportType === type.id
+                    ? 'text-primary-700 dark:text-primary-300'
+                    : 'text-gray-600 dark:text-gray-400'
+                }`}>
+                  {t(`reports.types.${type.id}.description`)}
+                </p>
+              </div>
+            </motion.button>
+          ))}
+        </div>
+      </div>
+
+      {/* Date Range Filters */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 border border-gray-200 dark:border-gray-700 shadow-sm mb-6 sm:mb-8">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">{t('reports.dateRange')}</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              {t('reports.startDate')}
+            </label>
+            <input
+              type="date"
+              value={dateRange.start}
+              onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              {t('reports.endDate')}
+            </label>
+            <input
+              type="date"
+              value={dateRange.end}
+              onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              {t('reports.exportFormat')}
+            </label>
+            <div className="flex space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                icon={PrinterIcon}
+                onClick={exportToPDF}
+                disabled={!reportData || isExporting}
+                className="flex-1"
+              >
+                {isExporting ? t('common.loading') : t('reports.exportFormats.pdf')}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                icon={DocumentArrowDownIcon}
+                onClick={exportToExcel}
+                disabled={!reportData || isExporting}
+                className="flex-1"
+              >
+                {isExporting ? t('common.loading') : t('reports.exportFormats.excel')}
+              </Button>
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              {t('reports.actions')}
+            </label>
+            <div className="grid grid-cols-3 gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                icon={BookmarkIcon}
+                onClick={() => setShowSaveDialog(true)}
+                disabled={!reportData}
+                className="flex items-center justify-center gap-1"
+              >
+                {t('reports.save')}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                icon={ShareIcon}
+                onClick={() => setShowShareDialog(true)}
+                disabled={!reportData}
+                className="flex items-center justify-center gap-1"
+              >
+                {t('reports.share')}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                icon={DocumentChartBarIcon}
+                onClick={() => setShowSavedReportsDialog(true)}
+                className="flex items-center justify-center gap-1"
+              >
+                {t('reports.savedReports')}
+              </Button>
+            </div>
+          </div>
+          <div className="flex items-end">
+            <Button
+              onClick={generateReport}
+              disabled={isGenerating || devicesLoading}
+              className="w-full bg-primary-500 hover:bg-primary-600 text-white px-4 py-2 sm:px-6 sm:py-3 rounded-lg transition-colors duration-200 flex items-center justify-center gap-2"
+            >
+              {isGenerating ? (
+                <ArrowPathIcon className="w-5 h-5 animate-spin" />
+              ) : (
+                <DocumentChartBarIcon className="w-5 h-5" />
+              )}
+              {isGenerating ? t('reports.generating') : t('reports.generateReport')}
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Loading State */}
+      <AnimatePresence>
+        {(isGenerating || devicesLoading) && (
+          <motion.div 
+            className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 sm:p-8 text-center"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.3 }}
+          >
+            <div className="flex flex-col items-center justify-center space-y-3">
+              <div className="relative">
+                <ArrowPathIcon className="h-8 w-8 text-primary-500 animate-spin" />
+                <div className="absolute inset-0 rounded-full border-2 border-primary-200 dark:border-primary-900/50 border-t-primary-500 animate-spin"></div>
+              </div>
+              <span className="text-gray-700 dark:text-gray-300 font-medium">
+                {devicesLoading ? t('devices.loading') : t('reports.generating')}
+              </span>
+              <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md">
+                {t('reports.generationDescription')}
+              </p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Report Results */}
+      <AnimatePresence>
+        {reportData && !isGenerating && !devicesLoading && (
+          <motion.div 
+            className="space-y-6"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.4 }}
+          >
+            {/* Report Header */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-3">
+                <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white flex items-center">
+                  <EyeIcon className="h-5 w-5 sm:h-6 sm:w-6 mr-2 text-primary-500" />
+                  {t(`reports.types.${reportType}.name`)}
+                </h2>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3">
+                  <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+                    {t('reports.generatedAt')}: {new Date().toLocaleString()}
+                  </div>
+                  <Button
+                    onClick={generateReport}
+                    size="sm"
+                    disabled={isGenerating}
+                    className="bg-primary-500 hover:bg-primary-600 text-white px-3 py-1.5 rounded-md flex items-center gap-2"
+                  >
+                    <ArrowPathIcon className="w-4 h-4" />
+                    {t('common.refresh')}
+                  </Button>
+                </div>
+              </div>
+
+              {/* Summary Cards */}
+              {reportData.summary && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                  {Object.entries(reportData.summary).map(([key, value], index) => (
+                    <motion.div
+                      key={key}
+                      className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg p-3 sm:p-4 border border-blue-200 dark:border-blue-800"
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: index * 0.05 }}
+                    >
+                      <div className="text-xs sm:text-sm font-medium text-blue-600 dark:text-blue-400 uppercase tracking-wide">
+                        {t(`reports.summaryLabels.${key}`, key.replace(/([A-Z])/g, ' $1').trim())}
+                      </div>
+                      <div className="text-lg sm:text-xl md:text-2xl font-bold text-blue-900 dark:text-blue-100 mt-1">
+                        {typeof value === 'number' && /percentage|uptime|cpu|memory/i.test(key) 
+                          ? `${value}%`
+                          : value
+                        }
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+          {reportData.details && reportData.details.length > 0 && (
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-4 rounded-md shadow-md">
+              <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">{t('reports.details')}</h3>
+              {reportType === 'deviceStatus' && (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead className="bg-gray-50 dark:bg-gray-700">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">{t('common.name')}</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">IP</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">{t('devices.deviceType')}</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">{t('devices.location')}</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">{t('common.status')}</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">{t('dashboard.lastUpdated')}</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                      {reportData.details.map((item, index) => (
+                        <tr key={index}>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{item.name}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{item.ip}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{t(`devices.${item.type}`) || item.type}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{item.location}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm">
+                            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                              normalizeStatusUp(item.status) ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                            }`}>
+                              {statusLabel(item.status)}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{item.lastUpdate}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {reportType === 'performance' && (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead className="bg-gray-50 dark:bg-gray-700">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">{t('devices.deviceName')}</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">{t('deviceDetail.cpuUsage')}</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">{t('deviceDetail.memoryUsage')}</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">{t('deviceDetail.bandwidthOut')}</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">{t('dashboard.peak')}</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">{t('dashboard.peak')} {t('deviceDetail.memoryUsage')}</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                      {reportData.details.map((item, index) => (
+                        <tr key={index}>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{item.device}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{item.avgCpu}%</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{item.avgMemory}%</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{item.avgBandwidth} Mbps</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{item.peakCpu}%</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{item.peakMemory}%</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {reportType === 'availability' && (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead className="bg-gray-50 dark:bg-gray-700">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">{t('devices.deviceName')}</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">IP</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">Uptime</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">Downtime</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">{t('reports.incidents')}</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                      {reportData.details.map((item, index) => (
+                        <tr key={index}>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{item.device}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{item.ip}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{item.uptime}%</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{item.downtime}%</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{item.incidents}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {reportType === 'incidents' && (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead className="bg-gray-50 dark:bg-gray-700">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">ID</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">{t('devices.deviceName')}</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">{t('alerts.table.title')}</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">{t('alerts.table.severity')}</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">{t('alerts.table.timestamp')}</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">{t('common.status')}</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                      {reportData.details.map((item, index) => (
+                        <tr key={index}>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{item.id}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{item.device}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{item.type}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm">
+                            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                              item.severity === 'critical' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' : item.severity === 'warning' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' : 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'
+                            }`}>
+                              {t(`alerts.severity.${item.severity}`)}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{item.timestamp}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{item.resolved ? t('common.yes') : t('common.no')}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {reportType === 'inventory' && (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead className="bg-gray-50 dark:bg-gray-700">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">ID</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">{t('devices.deviceName')}</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">IP</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">{t('devices.deviceType')}</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">{t('devices.location')}</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">Community</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">{t('common.date')}</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                      {reportData.details.map((item, index) => (
+                        <tr key={index}>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{item.id}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{item.name}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{item.ip}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{t(`devices.${item.type}`) || item.type}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{item.location}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{item.community || '-'}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{item.created}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {reportData?.charts && (
+            <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-6">
+              {reportData.charts.statusDistribution && (
+                <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-4 rounded-md shadow-md">
+                  <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">{t('reports.charts.statusDistribution')}</h3>
+                   <ResponsiveContainer width="100%" height={300}>
+                     <BarChart data={reportData.charts.statusDistribution}>
+                       <CartesianGrid strokeDasharray="3 3" stroke={chartGridColor} />
+                       <XAxis dataKey="name" tick={{ fill: chartTextColor, fontSize: 12 }} />
+                       <YAxis tick={{ fill: chartTextColor, fontSize: 12 }} />
+                       <Tooltip contentStyle={{ background: isDark ? '#111827' : '#ffffff', color: chartTextColor, borderColor: chartGridColor }} />
+                       <Legend wrapperStyle={{ color: chartTextColor }} />
+                      <Bar dataKey="value" fill="#10b981" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+
+              {reportData.charts.typeDistribution && (
+                <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-4 rounded-md shadow-md">
+                  <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">{t('reports.charts.typeDistribution')}</h3>
+                   <ResponsiveContainer width="100%" height={300}>
+                     <PieChart>
+                      <Pie data={reportData.charts.typeDistribution} cx="50%" cy="50%" outerRadius={150} fill="#8884d8" label>
+                        {reportData.charts.typeDistribution.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={`hsl(${index * 50}, 70%, 50%)`} />
+                        ))}
+                      </Pie>
+                       <Tooltip contentStyle={{ background: isDark ? '#111827' : '#ffffff', color: chartTextColor, borderColor: chartGridColor }} />
+                       <Legend wrapperStyle={{ color: chartTextColor }} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+
+              {reportData.charts.cpuUsage && (
+                <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-4 rounded-md shadow-md">
+                  <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">{t('reports.charts.cpuUsage')}</h3>
+                   <ResponsiveContainer width="100%" height={300}>
+                     <BarChart data={reportData.charts.cpuUsage}>
+                       <CartesianGrid strokeDasharray="3 3" stroke={chartGridColor} />
+                       <XAxis dataKey="device" tick={{ fill: chartTextColor, fontSize: 12 }} />
+                       <YAxis tick={{ fill: chartTextColor, fontSize: 12 }} />
+                       <Tooltip contentStyle={{ background: isDark ? '#111827' : '#ffffff', color: chartTextColor, borderColor: chartGridColor }} />
+                       <Legend wrapperStyle={{ color: chartTextColor }} />
+                      <Bar dataKey="cpu" fill="#10b981" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+
+              {reportData.charts.memoryUsage && (
+                <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-4 rounded-md shadow-md">
+                  <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">{t('reports.charts.memoryUsage')}</h3>
+                   <ResponsiveContainer width="100%" height={300}>
+                     <BarChart data={reportData.charts.memoryUsage}>
+                       <CartesianGrid strokeDasharray="3 3" stroke={chartGridColor} />
+                       <XAxis dataKey="device" tick={{ fill: chartTextColor, fontSize: 12 }} />
+                       <YAxis tick={{ fill: chartTextColor, fontSize: 12 }} />
+                       <Tooltip contentStyle={{ background: isDark ? '#111827' : '#ffffff', color: chartTextColor, borderColor: chartGridColor }} />
+                       <Legend wrapperStyle={{ color: chartTextColor }} />
+                      <Bar dataKey="memory" fill="#ef4444" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+
+              {reportData.charts.uptimeDistribution && (
+                <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-4 rounded-md shadow-md">
+                  <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">{t('reports.charts.uptimeDistribution')}</h3>
+                   <ResponsiveContainer width="100%" height={300}>
+                     <BarChart data={reportData.charts.uptimeDistribution}>
+                       <CartesianGrid strokeDasharray="3 3" stroke={chartGridColor} />
+                       <XAxis dataKey="device" tick={{ fill: chartTextColor, fontSize: 12 }} />
+                       <YAxis tick={{ fill: chartTextColor, fontSize: 12 }} />
+                       <Tooltip contentStyle={{ background: isDark ? '#111827' : '#ffffff', color: chartTextColor, borderColor: chartGridColor }} />
+                       <Legend wrapperStyle={{ color: chartTextColor }} />
+                      <Bar dataKey="uptime" fill="#10b981" />
+                      <Bar dataKey="downtime" fill="#ef4444" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+
+              {reportData.charts.bySeverity && (
+                <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-4 rounded-md shadow-md">
+                  <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">{t('reports.charts.incidentsBySeverity')}</h3>
+                   <ResponsiveContainer width="100%" height={300}>
+                     <BarChart data={reportData.charts.bySeverity}>
+                       <CartesianGrid strokeDasharray="3 3" stroke={chartGridColor} />
+                       <XAxis dataKey="severity" tick={{ fill: chartTextColor, fontSize: 12 }} />
+                       <YAxis tick={{ fill: chartTextColor, fontSize: 12 }} />
+                       <Tooltip contentStyle={{ background: isDark ? '#111827' : '#ffffff', color: chartTextColor, borderColor: chartGridColor }} />
+                       <Legend wrapperStyle={{ color: chartTextColor }} />
+                      <Bar dataKey="count" fill="#ef4444" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+
+              {reportData.charts.byType && (
+                <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-4 rounded-md shadow-md">
+                  <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">{t('reports.charts.incidentsByType')}</h3>
+                   <ResponsiveContainer width="100%" height={300}>
+                     <PieChart>
+                      <Pie data={reportData.charts.byType} cx="50%" cy="50%" outerRadius={150} fill="#8884d8" label>
+                        {reportData.charts.byType.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={`hsl(${index * 50}, 70%, 50%)`} />
+                        ))}
+                      </Pie>
+                       <Tooltip contentStyle={{ background: isDark ? '#111827' : '#ffffff', color: chartTextColor, borderColor: chartGridColor }} />
+                       <Legend wrapperStyle={{ color: chartTextColor }} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </div>
+          )}
+        </motion.div>
+      )}
+      </AnimatePresence>
+    </div>
+    
+    {/* Save Report Dialog */}
+    {showSaveDialog && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-xl max-w-md w-full mx-4"
+        >
+          <div className="flex items-center gap-3 mb-4">
+            <BookmarkIcon className="h-6 w-6 text-primary-500" />
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('reports.saveDialog.title')}</h3>
+          </div>
+          
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              {t('reports.saveDialog.reportName')}
+            </label>
+            <input
+              type="text"
+              value={reportName}
+              onChange={(e) => setReportName(e.target.value)}
+              placeholder={t('reports.saveDialog.placeholder')}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              onKeyPress={(e) => e.key === 'Enter' && saveReport()}
+            />
+          </div>
+          
+          <div className="flex items-center gap-3">
+            <Button
+              onClick={saveReport}
+              className="flex-1 flex items-center justify-center"
+            >
+              {t('reports.save')}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowSaveDialog(false);
+                setReportName('');
+              }}
+              className="flex-1"
+            >
+              {t('common.cancel')}
+            </Button>
+          </div>
+        </motion.div>
+      </div>
+    )}
+    
+    {/* Share Report Dialog */}
+    {showShareDialog && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-xl max-w-md w-full mx-4"
+        >
+          <div className="flex items-center gap-3 mb-4">
+            <ShareIcon className="h-6 w-6 text-primary-500" />
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('reports.shareDialog.title')}</h3>
+          </div>
+          
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              {t('reports.shareDialog.email')}
+            </label>
+            <input
+              type="email"
+              value={shareEmail}
+              onChange={(e) => setShareEmail(e.target.value)}
+              placeholder={t('reports.shareDialog.emailPlaceholder')}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            />
+          </div>
+          
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400 p-2 bg-gray-50 dark:bg-gray-700 rounded-lg">
+              <span>{t('reports.types.' + reportType + '.name')}</span>
+              <span className="px-2 py-1 bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300 rounded text-xs">
+                {dateRange.start} - {dateRange.end}
+              </span>
+            </div>
+            
+            <Button
+              icon={EnvelopeIcon}
+              onClick={() => {
+                // Implement email sharing functionality
+                alert(t('reports.shareDialog.success'));
+                setShowShareDialog(false);
+                setShareEmail('');
+              }}
+              className="w-full"
+            >
+              {t('reports.shareDialog.send')}
+            </Button>
+            
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowShareDialog(false);
+                setShareEmail('');
+              }}
+              className="w-full"
+            >
+              {t('common.cancel')}
+            </Button>
+          </div>
+        </motion.div>
+      </div>
+    )}
+    
+    {/* Saved Reports Dialog */}
+    {showSavedReportsDialog && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-xl max-w-4xl w-full mx-4 max-h-[80vh] flex flex-col"
+        >
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <DocumentChartBarIcon className="h-6 w-6 text-primary-500" />
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('reports.savedReportsDialog.title')}</h3>
+            </div>
+            <button 
+              onClick={() => setShowSavedReportsDialog(false)}
+              className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          
+          <div className="overflow-y-auto flex-1 -mx-6 px-6">
+            {savedReports.length === 0 ? (
+              <div className="text-center py-8">
+                <DocumentChartBarIcon className="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
+                <p className="text-gray-500 dark:text-gray-400">{t('reports.savedReportsDialog.empty')}</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {savedReports.map((report) => (
+                  <div
+                    key={report.id}
+                    className="bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 p-4 rounded-lg shadow-sm hover:shadow-md transition-shadow"
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <h4 className="font-medium text-gray-900 dark:text-white truncate" title={report.name}>
+                        {report.name}
+                      </h4>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (window.confirm(t('reports.savedReportsDialog.confirmDelete'))) {
+                            deleteSavedReport(report.id);
+                          }
+                        }}
+                        className="text-gray-400 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-400"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </div>
+                    
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                      <div className="flex items-center gap-1">
+                        <CalendarIcon className="w-3 h-3" />
+                        <span>{new Date(report.createdAt).toLocaleDateString()}</span>
+                      </div>
+                      <div className="mt-1">
+                        <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-600 rounded text-xs">
+                          {t('reports.types.' + report.type + '.name')}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <div className="flex mt-2">
+                      <Button
+                        size="xs"
+                        variant="outline"
+                        icon={EyeIcon}
+                        onClick={() => loadSavedReport(report)}
+                        className="flex-1 text-xs"
+                      >
+                        {t('reports.savedReportsDialog.load')}
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          
+          <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <Button
+              variant="outline"
+              onClick={() => setShowSavedReportsDialog(false)}
+              className="w-full"
+            >
+              {t('common.close')}
+            </Button>
+          </div>
+        </motion.div>
+      </div>
+    )}
+  </div>
+  );
+};
+
+export default Reports;
