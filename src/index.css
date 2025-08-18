@@ -141,6 +141,10 @@ html {
   .badge-info {
     @apply bg-info-100 text-info-800 dark:bg-info-900 dark:text-info-200;
   }
+
+  .badge-online {
+    @apply bg-success-100 text-success-800 dark:bg-success-900 dark:text-success-200;
+  }
   
   .table-container {
     @apply overflow-x-auto rounded-lg shadow;

@@ -1,9 +1,11 @@
-import React, { useState, useCallback, memo } from 'react';
+import React, { useState, useCallback, memo, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 
 import Navbar from '../components/layout/Navbar';
 import Sidebar from '../components/layout/Sidebar';
 import Footer from '../components/layout/Footer';
+import SessionWarning from '../components/SessionWarning';
+
 
 
 // Memoized components
@@ -22,8 +24,14 @@ const MainLayout = () => {
     setSidebarOpen(prev => !prev);
   }, []);
 
+  // Calculate effective sidebar state for margin
+  const effectiveSidebarOpen = sidebarOpen;
+
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
+      {/* Session Warning Banner */}
+      <SessionWarning />
+      
       {/* Navbar */}
       <MemoizedNavbar toggleSidebar={toggleSidebar} />
       
@@ -33,7 +41,7 @@ const MainLayout = () => {
       {/* Main Content */}
       <div 
         className={`flex-1 flex flex-col transition-all duration-300 ${
-          sidebarOpen ? 'ml-64' : 'ml-20'
+          effectiveSidebarOpen ? 'ml-64' : 'ml-20'
         }`}
       >
         <main className="flex-1 p-6 mt-16 overflow-auto">

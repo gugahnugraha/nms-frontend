@@ -7,7 +7,6 @@ import reportWebVitals from './reportWebVitals';
 import { store } from './redux/store';
 import { initSocket } from './services/socketService';
 
-
 // Initialize socket connection
 const socketResult = initSocket(store);
 

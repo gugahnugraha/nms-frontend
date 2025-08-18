@@ -34,11 +34,25 @@ import { useEffect } from 'react';
 import { toast } from 'react-toastify';
 import { removeNotification } from './redux/slices/uiSlice';
 import soundNotification from './utils/soundUtils';
+import sessionService from './services/sessionService';
+import userPresenceService from './services/userPresenceService';
 
 const App = () => {
   const { user } = useSelector((state) => state.auth);
   const notifications = useSelector((state) => state.ui.notifications);
   const dispatch = useDispatch();
+
+  // Initialize services after user is available
+  useEffect(() => {
+    if (user?._id) {
+      // Initialize session service
+      sessionService.startSessionTimer();
+      
+      // Initialize user presence service
+      userPresenceService.init();
+      userPresenceService.connect();
+    }
+  }, [user?._id]);
 
   // Show toast for every new notification
   useEffect(() => {

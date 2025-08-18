@@ -6,7 +6,6 @@ import { getDeviceById, pingDevice, updateDevice } from '../redux/slices/deviceS
 import { getDeviceSnmpData, getDeviceTimeSeries } from '../redux/slices/snmpSlice';
 import useInterfaceData from '../hooks/useInterfaceData';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, BarChart, Bar } from 'recharts';
-import { setSuppressNextDeviceStatusToast } from '../redux/slices/uiSlice';
 import DeviceForm from '../components/devices/DeviceForm';
 import {
   ServerIcon,
@@ -411,8 +410,7 @@ const DeviceDetail = () => {
     setIsPinging(true);
     setShowPingDialog(true);
     setPingResult(null);
-    // Suppress device status toast for this manual ping action
-    dispatch(setSuppressNextDeviceStatusToast(true));
+    
     try {
       const result = await dispatch(pingDevice(id)).unwrap();
       setPingResult(result);
@@ -421,13 +419,9 @@ const DeviceDetail = () => {
       setPingResult({ alive: false, pingDetails: { output: e.message } });
       setLastPingTime(new Date());
     } finally {
-      // Re-enable toasts for future automatic status changes
-      dispatch(setSuppressNextDeviceStatusToast(false));
       setIsPinging(false);
     }
   };
-
-
 
   // Edit handlers
   const handleOpenEdit = () => setIsEditOpen(true);

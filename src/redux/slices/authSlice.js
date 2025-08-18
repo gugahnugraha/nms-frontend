@@ -1,6 +1,5 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import axios from 'axios';
-import { API_ENDPOINTS } from '../../config/api';
+import api, { API_ENDPOINTS } from '../../config/api';
 
 // Get user from localStorage
 const user = JSON.parse(localStorage.getItem('user'));
@@ -18,7 +17,7 @@ export const login = createAsyncThunk(
   'auth/login',
   async (userData, thunkAPI) => {
     try {
-      const response = await axios.post(API_ENDPOINTS.LOGIN, userData);
+      const response = await api.post(API_ENDPOINTS.LOGIN, userData);
       
       if (response.data) {
         // Menyimpan token dan data user
@@ -72,7 +71,7 @@ export const register = createAsyncThunk(
   'auth/register',
   async (userData, thunkAPI) => {
     try {
-      const response = await axios.post(API_ENDPOINTS.REGISTER, userData);
+      const response = await api.post(API_ENDPOINTS.REGISTER, userData);
       return response.data;
     } catch (error) {
       const message = 
@@ -100,7 +99,7 @@ export const getProfile = createAsyncThunk(
         }
       };
       
-      const response = await axios.get(API_ENDPOINTS.PROFILE, config);
+      const response = await api.get(API_ENDPOINTS.PROFILE, config);
       return response.data;
     } catch (error) {
       const message = 
@@ -138,6 +137,7 @@ export const authSlice = createSlice({
         state.isSuccess = true;
         state.isError = false;
         state.user = action.payload;
+        
         // Identify socket user and join groups after successful login
         try {
           const { getSocket } = require('../../services/socketService');

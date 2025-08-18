@@ -2,16 +2,40 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { CodeBracketIcon, IdentificationIcon, ShieldCheckIcon, GlobeAltIcon } from '@heroicons/react/24/outline';
+import { getCurrentEnvironment, getEnvironmentConfig } from '../config/environment.js';
 
-const TECH_STACK = [
-  'React 18 • Redux Toolkit',
-  'Tailwind CSS • Headless UI',
-  'Recharts',
-  'Node.js (Express)',
-  'MongoDB',
-  'Prometheus • SNMP Exporter',
-  'Socket.IO'
-];
+const TECH_STACK_CATEGORIES = {
+  'Frontend': [
+    'React 18',
+    'Redux Toolkit',
+    'Tailwind CSS',
+    'Headless UI',
+    'Recharts',
+    'Socket.IO'
+  ],
+  'Backend': [
+    'Node.js',
+    'Express',
+    'PM2',
+    'MongoDB',
+    'Mongoose'
+  ],
+  'Infrastructure': [
+    'Docker',
+    'Docker Compose',
+    'Nginx',
+    'UFW Firewall'
+  ],
+  'Monitoring': [
+    'Prometheus',
+    'SNMP Exporter',
+    'Node Exporter'
+  ],
+  'Security': [
+    'Cloudflare Tunnel',
+    'SSL'
+  ]
+};
 
 const Badge = ({ children, className = '' }) => (
   <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${className}`}>{children}</span>
@@ -19,6 +43,8 @@ const Badge = ({ children, className = '' }) => (
 
 const About = () => {
   const { t } = useTranslation();
+  const environment = getCurrentEnvironment();
+  const environmentConfig = getEnvironmentConfig(environment);
 
   return (
     <div className="min-h-[60vh]">
@@ -44,6 +70,9 @@ const About = () => {
                 </Badge>
                 <Badge className="bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300">{t('about.license')}: MIT</Badge>
                 <Badge className="bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200">{t('about.copyright', { year: 2025 })}</Badge>
+                <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+                  {t('about.environment')}: {environmentConfig.name}
+                </Badge>
               </div>
             </div>
             <ShieldCheckIcon className="w-10 h-10 text-indigo-600 dark:text-indigo-400" />
@@ -87,11 +116,35 @@ const About = () => {
             <CodeBracketIcon className="w-6 h-6 text-purple-600" />
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{t('about.techStack')}</h2>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {TECH_STACK.map((tItem) => (
-              <span key={tItem} className="px-2.5 py-1 rounded-md text-xs bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200">
-                {tItem}
-              </span>
+          
+          {/* Environment Info */}
+          <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+            <div className="text-xs font-medium text-blue-800 dark:text-blue-300 mb-2">
+              🚀 Current Environment
+            </div>
+            <div className="space-y-1 text-xs text-blue-700 dark:text-blue-400">
+              <div><strong>Mode:</strong> {environment}</div>
+              <div><strong>API:</strong> {environmentConfig.API_BASE_URL}</div>
+              <div><strong>Socket:</strong> {environmentConfig.SOCKET_URL}</div>
+              <div><strong>Reverse Proxy:</strong> Nginx</div>
+            </div>
+          </div>
+          
+          {/* Tech Stack Categories */}
+          <div className="space-y-3">
+            {Object.entries(TECH_STACK_CATEGORIES).map(([category, technologies]) => (
+              <div key={category}>
+                <h4 className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5 uppercase tracking-wide">
+                  {category}:
+                </h4>
+                <div className="flex flex-wrap gap-1.5">
+                  {technologies.map((tech) => (
+                    <span key={tech} className="text-xs text-gray-600 dark:text-gray-400">
+                      • {tech}
+                    </span>
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
         </motion.div>
@@ -103,7 +156,7 @@ const About = () => {
           href="https://github.com/gugahnugraha"
           target="_blank"
           rel="noreferrer"
-          className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-900 text-white hover:bg-black/90"
+          className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-800 dark:bg-gray-700 text-white hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors"
         >
           <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4" aria-hidden>
             <path d="M12 .5A11.5 11.5 0 0 0 .5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.56v-1.96c-3.2.7-3.87-1.37-3.87-1.37-.53-1.34-1.3-1.7-1.3-1.7-1.06-.73.08-.72.08-.72 1.18.08 1.8 1.22 1.8 1.22 1.05 1.8 2.75 1.28 3.42.98.11-.77.41-1.28.74-1.57-2.55-.29-5.23-1.28-5.23-5.67 0-1.25.45-2.27 1.2-3.06-.12-.29-.52-1.47.11-3.06 0 0 .98-.31 3.21 1.17.93-.26 1.93-.39 2.92-.4.99.01 1.99.14 2.93.4 2.22-1.48 3.2-1.17 3.2-1.17.63 1.59.23 2.77.11 3.06.75.79 1.2 1.81 1.2 3.06 0 4.4-2.68 5.38-5.24 5.67.42.37.79 1.1.79 2.22v3.29c0 .31.21.67.8.56A11.5 11.5 0 0 0 23.5 12 11.5 11.5 0 0 0 12 .5z"/>
@@ -114,7 +167,7 @@ const About = () => {
           href="https://instagram.com/gugahnugraha"
           target="_blank"
           rel="noreferrer"
-          className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-pink-600 text-white hover:bg-pink-700"
+          className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-pink-600 text-white hover:bg-pink-700 transition-colors"
         >
           <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4" aria-hidden>
             <path d="M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5zm0 2a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3H7zm5 3.5A5.5 5.5 0 1 1 6.5 13 5.5 5.5 0 0 1 12 7.5zm0 2A3.5 3.5 0 1 0 15.5 13 3.5 3.5 0 0 0 12 9.5zm5.75-3.5a1 1 0 1 1-1 1 1 1 0 0 1 1-1z"/>

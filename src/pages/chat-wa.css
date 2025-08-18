@@ -56,6 +56,11 @@
   .rce-mbox-time { font-size: 11px; }
 }
 
+/* Dark mode text colors for better contrast */
+.dark .rce-mbox .rce-mbox-title { color: #1f2937 !important; }
+.dark .rce-mbox .rce-mbox-text { color: #1f2937 !important; }
+.dark .rce-mbox .rce-mbox-time { color: #6b7280 !important; }
+
 /* Light: left/right */
 .chat-wa .rce-message.rce-message--left .rce-mbox,
 .chat-wa .rce-message.rce-message--left .rce-mbox > .rce-mbox-body,
@@ -71,33 +76,53 @@
 .rce-message.rce-message--right .rce-mbox,
 .rce-message.rce-message--right .rce-mbox > .rce-mbox-body { background:#d9fdd3 !important; background-color:#d9fdd3 !important; color:#111b21 !important; }
 
+/* Light mode text colors for better contrast */
+.rce-mbox .rce-mbox-title { color: #111b21 !important; }
+.rce-mbox .rce-mbox-text { color: #111b21 !important; }
+.rce-mbox .rce-mbox-time { color: #6b7280 !important; }
+
 /* Dark: left/right */
 .dark .chat-wa .rce-message.rce-message--left .rce-mbox,
 .dark .chat-wa .rce-message.rce-message--left .rce-mbox > .rce-mbox-body,
 .dark .chat-wa .rce-mbox.rce-mbox-left,
 .dark .chat-wa .rce-mbox.rce-mbox-left > .rce-mbox-body,
 .dark .rce-message.rce-message--left .rce-mbox,
-.dark .rce-message.rce-message--left .rce-mbox > .rce-mbox-body { background:#ffffff !important; color:#111827 !important; }
+.dark .rce-message.rce-message--left .rce-mbox > .rce-mbox-body { background:#D4CD5B !important; color:#000000 !important; }
 
 .dark .chat-wa .rce-message.rce-message--right .rce-mbox,
 .dark .chat-wa .rce-message.rce-message--right .rce-mbox > .rce-mbox-body,
 .dark .chat-wa .rce-mbox.rce-mbox-right,
 .dark .chat-wa .rce-mbox.rce-mbox-right > .rce-mbox-body,
 .dark .rce-message.rce-message--right .rce-mbox,
-.dark .rce-message.rce-message--right .rce-mbox > .rce-mbox-body { background:#c1f7d0 !important; color:#111827 !important; }
-
-/* Remove bubble tails */
-.chat-wa .rce-mbox:before,
-.chat-wa .rce-mbox:after,
-.chat-wa .rce-mbox-body:before,
-.chat-wa .rce-mbox-body:after,
-.chat-wa .rce-message .rce-mbox:before,
-.chat-wa .rce-message .rce-mbox:after,
-.chat-wa .rce-message .rce-mbox-body:before,
-.chat-wa .rce-message .rce-mbox-body:after { display:block !important; border:0 !important; }
+.dark .rce-message.rce-message--right .rce-mbox > .rce-mbox-body { background:#5AC9E0 !important; color:#000000 !important; }
 
 /* Avatar outline */
 .rce-avatar, .dark .rce-avatar { border:1px solid #00a884 !important; }
+
+/* Input area styling for better contrast */
+.chat-input-container input,
+.chat-input-container textarea {
+  color: #111b21 !important;
+  background: #ffffff !important;
+  border: 1px solid #d1d5db !important;
+}
+
+.dark .chat-input-container input,
+.dark .chat-input-container textarea {
+  color: #1f2937 !important;
+  background: #ffffff !important;
+  border: 1px solid #6b7280 !important;
+}
+
+.chat-input-container input::placeholder,
+.chat-input-container textarea::placeholder {
+  color: #9ca3af !important;
+}
+
+.dark .chat-input-container input::placeholder,
+.dark .chat-input-container textarea::placeholder {
+  color: #6b7280 !important;
+}
 
 /* Responsive Avatar size */
 @media (max-width: 640px) {
@@ -129,3 +154,22 @@
     max-width: 85% !important;
   }
 }
+
+/* Header styling for better contrast */
+.chat-header {
+  background: #075e54 !important;
+  color: #ffffff !important;
+}
+
+.dark .chat-header {
+  background: #128c7e !important;
+  color: #ffffff !important;
+}
+
+.chat-header h1,
+.chat-header h2,
+.chat-header h3 {
+  color: #ffffff !important;
+}
+
+

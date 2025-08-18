@@ -246,12 +246,6 @@ const Settings = () => {
               {/* Action bar */}
               <div className="flex items-center justify-end gap-2 p-4 border-b border-gray-200 dark:border-gray-700">
                 <Button
-                  variant="outline"
-                  onClick={resetToDefaults}
-                >
-                  {t('settings.actions.reset')}
-                </Button>
-                <Button
                   variant="primary"
                   icon={isSaving ? ArrowPathIcon : CheckCircleIcon}
                   onClick={handleSaveSettings}

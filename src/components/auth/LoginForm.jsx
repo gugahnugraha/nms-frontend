@@ -158,9 +158,12 @@ const LoginForm = () => {
               
               {/* Error Message */}
               {isError && (
-                <div className="rounded-lg bg-red-500/20 border border-red-500/30 p-3 flex items-start">
-                  <ExclamationCircleIcon className="h-5 w-5 text-red-400 mt-0.5 flex-shrink-0" />
-                  <p className="ml-3 text-sm text-red-200">{message}</p>
+                <div className="rounded-lg bg-red-50 dark:bg-red-500/20 border border-red-200 dark:border-red-500/30 p-3 flex items-start">
+                  <ExclamationCircleIcon className="h-5 w-5 text-red-500 dark:text-red-400 mt-0.5 flex-shrink-0" />
+                  <p className="ml-3 text-sm text-red-900 dark:text-red-200 font-medium">
+                    {/* {message === 'Invalid credentials' ? t('auth.invalidCredentials') : message} */}
+                    { message}
+                  </p>
                 </div>
               )}
               

@@ -11,6 +11,8 @@ import {
   ExclamationCircleIcon,
   EyeIcon,
   EyeSlashIcon,
+  CheckCircleIcon,
+  XMarkIcon,
 } from '@heroicons/react/24/outline';
 import { register } from '../../redux/slices/authSlice';
 
@@ -33,53 +35,64 @@ const RegisterForm = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [validationErrors, setValidationErrors] = useState({});
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [registrationData, setRegistrationData] = useState(null);
 
   const { username, email, password, confirmPassword, nik, agreeTerms } = formData;
   const { fullName } = formData;
 
   const validateForm = () => {
+    const errors = {};
+
     // Full Name validation
     if (!fullName.trim()) {
       errors.fullName = t('auth.fullNameRequired', 'Nama Lengkap wajib diisi');
+    } else if (fullName.trim().length < 2) {
+      errors.fullName = t('auth.fullNameTooShort', 'Nama Lengkap minimal 2 karakter');
     }
-    const errors = {};
 
     // Username validation
     if (!username.trim()) {
-      errors.username = t('auth.usernameRequired', 'Username is required');
+      errors.username = t('auth.usernameRequired', 'Username wajib diisi');
     } else if (username.length < 3) {
-      errors.username = t('auth.usernameTooShort', 'Username must be at least 3 characters');
+      errors.username = t('auth.usernameTooShort', 'Username minimal 3 karakter');
+    } else if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+      errors.username = t('auth.usernameInvalid', 'Username hanya boleh berisi huruf, angka, dan underscore');
     }
 
     // Email validation
     if (!email.trim()) {
-      errors.email = t('auth.emailRequired', 'Email is required');
+      errors.email = t('auth.emailRequired', 'Email wajib diisi');
     } else if (!/\S+@\S+\.\S+/.test(email)) {
-      errors.email = t('auth.emailInvalid', 'Please enter a valid email');
+      errors.email = t('auth.emailInvalid', 'Format email tidak valid');
     }
 
     // NIK validation
     if (!nik.trim()) {
-      errors.nik = t('auth.nikRequired', 'NIK is required');
+      errors.nik = t('auth.nikRequired', 'NIK wajib diisi');
     } else if (!/^\d{16}$/.test(nik)) {
-      errors.nik = t('auth.nikInvalid', 'NIK must be exactly 16 digits');
+      errors.nik = t('auth.nikInvalid', 'NIK harus tepat 16 digit angka');
     }
 
     // Password validation
     if (!password) {
-      errors.password = t('auth.passwordRequired', 'Password is required');
+      errors.password = t('auth.passwordRequired', 'Password wajib diisi');
     } else if (password.length < 6) {
-      errors.password = t('auth.passwordTooShort', 'Password must be at least 6 characters');
+      errors.password = t('auth.passwordTooShort', 'Password minimal 6 karakter');
+    } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password)) {
+      errors.password = t('auth.passwordComplexity', 'Password harus mengandung huruf besar, huruf kecil, dan angka');
     }
 
     // Confirm password validation
-    if (password !== confirmPassword) {
-      errors.confirmPassword = t('auth.passwordsDoNotMatch', 'Passwords do not match');
+    if (!confirmPassword) {
+      errors.confirmPassword = t('auth.confirmPasswordRequired', 'Konfirmasi password wajib diisi');
+    } else if (password !== confirmPassword) {
+      errors.confirmPassword = t('auth.passwordsDoNotMatch', 'Password dan konfirmasi password tidak cocok');
     }
 
     // Terms validation
     if (!agreeTerms) {
-      errors.agreeTerms = t('auth.termsRequired', 'You must agree to terms and conditions');
+      errors.agreeTerms = t('auth.termsRequired', 'Anda harus menyetujui syarat dan ketentuan');
     }
 
     setValidationErrors(errors);
@@ -100,6 +113,73 @@ const RegisterForm = () => {
         [name]: '',
       }));
     }
+
+    // Real-time validation for specific fields
+    if (name === 'username' && value.trim()) {
+      if (value.length < 3) {
+        setValidationErrors(prev => ({
+          ...prev,
+          username: t('auth.usernameTooShort', 'Username minimal 3 karakter')
+        }));
+      } else if (!/^[a-zA-Z0-9_]+$/.test(value)) {
+        setValidationErrors(prev => ({
+          ...prev,
+          username: t('auth.usernameInvalid', 'Username hanya boleh berisi huruf, angka, dan underscore')
+        }));
+      } else {
+        setValidationErrors(prev => ({
+          ...prev,
+          username: ''
+        }));
+      }
+    }
+
+    if (name === 'password' && value) {
+      if (value.length < 6) {
+        setValidationErrors(prev => ({
+          ...prev,
+          password: t('auth.passwordTooShort', 'Password minimal 6 karakter')
+        }));
+      } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(value)) {
+        setValidationErrors(prev => ({
+          ...prev,
+          password: t('auth.passwordComplexity', 'Password harus mengandung huruf besar, huruf kecil, dan angka')
+        }));
+      } else {
+        setValidationErrors(prev => ({
+          ...prev,
+          password: ''
+        }));
+      }
+    }
+
+    if (name === 'confirmPassword' && value && password) {
+      if (value !== password) {
+        setValidationErrors(prev => ({
+          ...prev,
+          confirmPassword: t('auth.passwordsDoNotMatch', 'Password dan konfirmasi password tidak cocok')
+        }));
+      } else {
+        setValidationErrors(prev => ({
+          ...prev,
+          confirmPassword: ''
+        }));
+      }
+    }
+
+    if (name === 'nik' && value.trim()) {
+      if (!/^\d{16}$/.test(value)) {
+        setValidationErrors(prev => ({
+          ...prev,
+          nik: t('auth.nikInvalid', 'NIK harus tepat 16 digit angka')
+        }));
+      } else {
+        setValidationErrors(prev => ({
+          ...prev,
+          nik: ''
+        }));
+      }
+    }
   };
 
   const onSubmit = (e) => {
@@ -116,12 +196,23 @@ const RegisterForm = () => {
       dispatch(register(userData))
         .unwrap()
         .then(() => {
-          navigate('/login');
+          // Set registration data untuk dialog
+          setRegistrationData({
+            username: username,
+            password: password
+          });
+          setShowSuccessDialog(true);
         })
         .catch((error) => {
           console.error('Registration failed:', error);
         });
     }
+  };
+
+  const handleCloseSuccessDialog = () => {
+    setShowSuccessDialog(false);
+    setRegistrationData(null);
+    navigate('/login');
   };
 
   return (
@@ -257,26 +348,28 @@ const RegisterForm = () => {
                   {t('auth.password', 'Password')}
                 </label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                    <KeyIcon className="h-5 w-5 text-gray-500 dark:text-gray-500" />
-                  </div>
                   <input
                     id="password"
                     name="password"
                     type={showPassword ? 'text' : 'password'}
                     autoComplete="new-password"
                     required
-                    className={`block w-full pl-10 pr-10 py-2.5 rounded-lg bg-gray-50 dark:bg-gray-800/50 border ${
+                    className={`block w-full py-2.5 rounded-lg bg-gray-50 dark:bg-gray-800/50 border ${
                       validationErrors.password ? 'border-red-500 dark:border-red-500' : 'border-gray-300 dark:border-gray-700/50'
-                    } text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all min-w-[220px] sm:min-w-[260px] lg:min-w-[320px]`}
+                    } text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all min-w-[220px] sm:min-w-[260px] lg:min-w-[320px] pl-10 pr-10`}
                     placeholder={t('auth.passwordPlaceholder', 'Enter your password')}
                     value={password}
                     onChange={onChange}
                   />
+                  {/* Key Icon */}
+                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                    <KeyIcon className="h-5 w-5 text-gray-500 dark:text-gray-500" />
+                  </span>
+                  {/* Eye Icon Button */}
                   <button
                     type="button"
                     onClick={() => setShowPassword(prev => !prev)}
-                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-400 transition-colors"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-400 transition-colors"
                   >
                     {showPassword ? (
                       <EyeSlashIcon className="h-5 w-5" aria-hidden="true" />
@@ -287,6 +380,38 @@ const RegisterForm = () => {
                   {validationErrors.password && (
                     <p className="mt-1 text-sm text-red-500">{validationErrors.password}</p>
                   )}
+                  
+                  {/* Password Strength Indicator */}
+                  {password && (
+                    <div className="mt-2">
+                      <div className="flex space-x-1">
+                        <div className={`h-1 flex-1 rounded ${
+                          password.length < 6 ? 'bg-red-500' : 
+                          password.length < 8 ? 'bg-yellow-500' : 
+                          /(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password) ? 'bg-green-500' : 'bg-gray-300'
+                        }`}></div>
+                        <div className={`h-1 flex-1 rounded ${
+                          password.length < 6 ? 'bg-red-500' : 
+                          password.length < 8 ? 'bg-yellow-500' : 
+                          /(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password) ? 'bg-green-500' : 'bg-gray-300'
+                        }`}></div>
+                        <div className={`h-1 flex-1 rounded ${
+                          password.length < 6 ? 'bg-red-500' : 
+                          password.length < 8 ? 'bg-yellow-500' : 
+                          /(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password) ? 'bg-green-500' : 'bg-gray-300'
+                        }`}></div>
+                      </div>
+                      <p className={`text-xs mt-1 ${
+                        password.length < 6 ? 'text-red-500' : 
+                        password.length < 8 ? 'text-yellow-500' : 
+                        /(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password) ? 'text-green-500' : 'text-gray-500'
+                      }`}>
+                        {password.length < 6 ? t('auth.passwordWeak', 'Lemah') : 
+                         password.length < 8 ? t('auth.passwordMedium', 'Sedang') : 
+                         /(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password) ? t('auth.passwordStrong', 'Kuat') : t('auth.passwordVeryWeak', 'Sangat Lemah')}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -296,26 +421,28 @@ const RegisterForm = () => {
                   {t('auth.confirmPassword', 'Confirm Password')}
                 </label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                    <KeyIcon className="h-5 w-5 text-gray-500 dark:text-gray-500" />
-                  </div>
                   <input
                     id="confirmPassword"
                     name="confirmPassword"
                     type={showConfirmPassword ? 'text' : 'password'}
                     autoComplete="new-password"
                     required
-                    className={`block w-full pl-10 pr-10 py-2.5 rounded-lg bg-gray-50 dark:bg-gray-800/50 border ${
+                    className={`block w-full py-2.5 rounded-lg bg-gray-50 dark:bg-gray-800/50 border ${
                       validationErrors.confirmPassword ? 'border-red-500 dark:border-red-500' : 'border-gray-300 dark:border-gray-700/50'
-                    } text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all min-w-[220px] sm:min-w-[260px] lg:min-w-[320px]`}
+                    } text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all min-w-[220px] sm:min-w-[260px] lg:min-w-[320px] pl-10 pr-10`}
                     placeholder={t('auth.confirmPasswordPlaceholder', 'Confirm your password')}
                     value={confirmPassword}
                     onChange={onChange}
                   />
+                  {/* Key Icon */}
+                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                    <KeyIcon className="h-5 w-5 text-gray-500 dark:text-gray-500" />
+                  </span>
+                  {/* Eye Icon Button */}
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(prev => !prev)}
-                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-400 transition-colors"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-400 transition-colors"
                   >
                     {showConfirmPassword ? (
                       <EyeSlashIcon className="h-5 w-5" aria-hidden="true" />
@@ -354,7 +481,7 @@ const RegisterForm = () => {
               {isError && (
                 <div className="col-span-1 sm:col-span-2 rounded-lg bg-red-500/20 border border-red-500/30 p-3 flex items-start">
                   <ExclamationCircleIcon className="h-5 w-5 text-red-400 mt-0.5 flex-shrink-0" />
-                  <p className="ml-3 text-sm text-red-200">{message}</p>
+                  <p className="ml-3 text-sm text-red-900 dark:text-red-200 font-medium">{message}</p>
                 </div>
               )}
               
@@ -410,6 +537,72 @@ const RegisterForm = () => {
           </div>
         </div>
       </div>
+
+      {/* Success Dialog */}
+      {showSuccessDialog && registrationData && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center">
+                <CheckCircleIcon className="h-6 w-6 text-green-500 mr-2" />
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  {t('auth.registrationSuccess', 'Registrasi Berhasil!')}
+                </h3>
+              </div>
+              <button
+                onClick={handleCloseSuccessDialog}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              >
+                <XMarkIcon className="h-6 w-6" />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="space-y-4">
+              <p className="text-gray-600 dark:text-gray-300">
+                {t('auth.registrationSuccessMessage', 'Selamat! Akun Anda telah berhasil dibuat.')}
+              </p>
+              
+              <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 space-y-3">
+                <div>
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {t('auth.username', 'Username')}:
+                  </span>
+                  <span className="ml-2 text-sm text-gray-900 dark:text-white font-mono">
+                    {registrationData.username}
+                  </span>
+                </div>
+                
+                <div>
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {t('auth.password', 'Password')}:
+                  </span>
+                  <span className="ml-2 text-sm text-gray-900 dark:text-white font-mono">
+                    {registrationData.password}
+                  </span>
+                </div>
+              </div>
+
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                <p className="text-sm text-blue-800 dark:text-blue-200">
+                  <strong>{t('auth.important', 'Penting!')}</strong> {t('auth.saveCredentials', 'Simpan informasi login Anda dengan aman. Password dapat diubah dihalaman profil.')}
+                </p>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={handleCloseSuccessDialog}
+                className="px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg font-medium transition-colors"
+              >
+                {t('auth.continueToLogin', 'Lanjut ke Login')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

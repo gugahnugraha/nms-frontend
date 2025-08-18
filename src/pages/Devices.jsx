@@ -11,7 +11,6 @@ import {
   deleteDevice,
   pingDevice
 } from '../redux/slices/deviceSlice';
-import { setSuppressNextDeviceStatusToast } from '../redux/slices/uiSlice';
 import { subscribeToDevices } from '../services/socketService';
 import DeviceCard from '../components/devices/DeviceCard';
 import DeviceForm from '../components/devices/DeviceForm';
@@ -196,8 +195,7 @@ const Devices = () => {
     setIsPinging(true);
     setShowPingDialog(true);
     setPingResult({ pingOutput: `PING ${device.ip} (${device.ip})`, alive: null, pingDetails: {} });
-    // Suppress next toast from socket update
-    dispatch(setSuppressNextDeviceStatusToast(true));
+    
     dispatch(pingDevice(device._id))
       .unwrap()
       .then((result) => {

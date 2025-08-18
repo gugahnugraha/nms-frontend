@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import PingDialog from './PingDialog';
 import { pingDevice } from '../../redux/slices/deviceSlice';
-import { setSuppressNextDeviceStatusToast } from '../../redux/slices/uiSlice';
 import { 
   ServerIcon, 
   WifiIcon, 
@@ -15,7 +14,7 @@ import {
   XCircleIcon,
   CpuChipIcon
 } from '@heroicons/react/24/outline';
-import soundNotification from '../../utils/soundUtils';
+// Sound notification dihapus untuk manual ping - hanya untuk status change otomatis
 
 const DeviceCard = ({ device, onEdit, onDelete, isAdmin }) => {
   const { t } = useTranslation();
@@ -40,8 +39,6 @@ const DeviceCard = ({ device, onEdit, onDelete, isAdmin }) => {
     
     // Suppress next deviceStatusChange toast untuk manual ping
     // Manual ping akan menampilkan dialog, bukan toast
-    dispatch(setSuppressNextDeviceStatusToast(true));
-    
     dispatch(pingDevice(device._id))
       .unwrap()
       .then((result) => {
@@ -94,23 +91,14 @@ const DeviceCard = ({ device, onEdit, onDelete, isAdmin }) => {
     setPingResult(null);
     
     try {
-      // Suppress toast untuk manual ping
-      dispatch(setSuppressNextDeviceStatusToast(true));
-      
       const result = await dispatch(pingDevice(device._id)).unwrap();
       setPingResult(result);
       
-      // Play sound based on ping result
-      if (result.alive) {
-        soundNotification.playSuccess();
-      } else {
-        soundNotification.playError();
-      }
-      
+      // Manual ping tidak memainkan sound - hanya tampilkan dialog
       setShowPingDialog(true);
     } catch (error) {
       console.error('Ping failed:', error);
-      soundNotification.playError();
+      // Manual ping tidak memainkan sound - hanya tampilkan dialog
       setPingResult({ alive: false, error: error.message });
       setShowPingDialog(true);
     } finally {
